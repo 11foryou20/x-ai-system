@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X AI投稿管理システム v2</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f5f2;
+    --surface: #ffffff;
+    --surface2: #eeece8;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.15);
+    --text: #1a1a1a;
+    --text2: #666;
+    --text3: #aaa;
+    --accent: #D98A4E;
+    --accent-light: #f5e6d8;
+    --accent-dark: #b8713a;
+    --success: #4caf7d;
+    --success-light: #e8f5ee;
+    --danger: #e05555;
+    --danger-light: #fdeaea;
+    --info: #5b8dee;
+    --info-light: #eaf0fd;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .header-left h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-left p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* Badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .badge-warn { background: #fff3cd; color: #856404; }
+  .badge-success { background: var(--success-light); color: #2e7d4f; }
+  .badge-info { background: var(--info-light); color: #2c5fd4; }
+  .badge-danger { background: var(--danger-light); color: #c0392b; }
+  .badge-accent { background: var(--accent-light); color: var(--accent-dark); }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 2px; background: var(--surface2);
+    border-radius: var(--radius); padding: 4px; margin-bottom: 20px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 1; min-width: 80px; padding: 9px 8px;
+    font-size: 12px; font-weight: 500; text-align: center;
+    border: none; background: transparent; border-radius: var(--radius-sm);
+    cursor: pointer; transition: all 0.2s; color: var(--text2); white-space: nowrap;
+  }
+  .tab.active { background: var(--surface); color: var(--accent); font-weight: 700; box-shadow: var(--shadow); }
+  .tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.5); }
+
+  /* Panel */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Card */
+  .card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 13px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+  }
+  .card-title::before {
+    content: ''; display: block; width: 3px; height: 14px;
+    background: var(--accent); border-radius: 2px;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Form */
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+  input[type=text], input[type=password], input[type=datetime-local], textarea, select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+    background: var(--bg); color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  .form-group { margin-bottom: 14px; }
+
+  /* Button */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.2s; font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(217,138,78,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-secondary:hover { background: var(--border2); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #3d9e6a; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* Metric */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 640px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+  .metric {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 16px; border: 1px solid var(--border); text-align: center;
+  }
+  .metric-val { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 500; }
+  .metric-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* Progress bar */
+  .progress-wrap { background: var(--surface2); border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s; }
+
+  /* Post item */
+  .post-item {
+    padding: 14px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .post-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .post-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+  .post-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .char-count { font-size: 11px; text-align: right; margin-top: 4px; color: var(--text3); }
+  .char-count.warn { color: #f59e0b; }
+  .char-count.over { color: var(--danger); font-weight: 700; }
+
+  /* AI output */
+  .ai-output {
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 14px; font-size: 13px; line-height: 1.8;
+    border: 1px solid var(--border); white-space: pre-wrap;
+    min-height: 60px;
+  }
+  .ai-output.empty { color: var(--text3); font-style: italic; }
+
+  /* Loading */
+  .loading {
+    display: none; text-align: center; padding: 20px;
+    color: var(--text2); font-size: 13px;
+  }
+  .loading::before {
+    content: ''; display: block; width: 24px; height: 24px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin: 0 auto 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Notify */
+  .notify {
+    font-size: 12px; padding: 0; opacity: 0;
+    transition: opacity 0.3s; margin-top: 8px; border-radius: var(--radius-sm);
+  }
+  .notify.success { opacity: 1; color: var(--success); }
+  .notify.error { opacity: 1; color: var(--danger); }
+  .notify.info { opacity: 1; color: var(--info); }
+
+  /* Sheet info box */
+  .info-box {
+    background: var(--info-light); border: 1px solid #c3d8fb;
+    border-radius: var(--radius-sm); padding: 14px; font-size: 13px;
+    line-height: 1.7; margin-bottom: 14px;
+  }
+  .info-box strong { color: var(--info); }
+  .warn-box {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: var(--radius-sm); padding: 14px; font-size: 13px;
+    line-height: 1.7; margin-bottom: 14px;
+  }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  /* Step */
+  .step { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+  .step-num {
+    min-width: 26px; height: 26px; background: var(--accent);
+    color: white; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-content { font-size: 13px; line-height: 1.7; }
+  .step-content code {
+    background: var(--surface2); padding: 1px 6px; border-radius: 4px;
+    font-size: 12px; font-family: monospace;
+  }
+
+  /* Tag */
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; margin-right: 4px;
+  }
+  .tag-tone { background: var(--accent-light); color: var(--accent-dark); }
+  .tag-target { background: var(--info-light); color: #2c5fd4; }
+
+  /* Persona preview */
+  .persona-box {
+    background: linear-gradient(135deg, var(--accent-light), #fff);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+    font-size: 12px; line-height: 1.8;
+  }
+  .persona-box h3 { font-size: 13px; font-weight: 700; color: var(--accent-dark); margin-bottom: 8px; }
+
+  /* Scrollable list */
+  .scroll-list { max-height: 400px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>☺️ X AI投稿管理システム</h1>
+      <p>みずなみ個人ブランド用 ｜ v2.0 Notion-free</p>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-accent" id="x-status">X API 未設定</span>
+      <span class="badge badge-info" id="sheet-status">スプレッドシート 未設定</span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard')">📊 ダッシュボード</button>
+    <button class="tab" onclick="switchTab('generate')">✨ AI生成</button>
+    <button class="tab" onclick="switchTab('schedule')">📅 予約投稿</button>
+    <button class="tab" onclick="switchTab('analytics')">📈 分析入力</button>
+    <button class="tab" onclick="switchTab('settings')">⚙️ 設定</button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="metric-grid" style="margin-bottom:16px;">
+      <div class="metric">
+        <div class="metric-val" id="m-posts">0</div>
+        <div class="metric-label">今月の投稿数</div>
+        <div class="progress-wrap"><div class="progress-bar" id="m-bar" style="width:0%"></div></div>
+        <div class="metric-sub">残り <span id="m-remaining">1500</span> 件</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="m-scheduled">0</div>
+        <div class="metric-label">予約済み</div>
+        <div class="metric-sub">件</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="m-engage">-</div>
+        <div class="metric-label">平均ER</div>
+        <div class="metric-sub">エンゲージメント率</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="m-saved">0</div>
+        <div class="metric-label">シート保存数</div>
+        <div class="metric-sub">分析レポート</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">予約済み投稿</div>
+        <div id="dash-scheduled" class="scroll-list">
+          <p style="color:var(--text3);font-size:13px;">予約投稿はまだありません</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">最近の分析データ</div>
+        <div id="dash-analytics" class="scroll-list">
+          <p style="color:var(--text3);font-size:13px;">分析データがありません</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="persona-box">
+      <h3>☺️ みずなみらしさチェックリスト</h3>
+      ✅ 等身大・体験ベースで書いているか<br>
+      ✅ 煽り・誇大表現を使っていないか<br>
+      ✅ 感謝や貢献の気持ちが自然に出ているか<br>
+      ✅ 専門用語を現場の言葉に変換しているか<br>
+      ✅ 絵文字は ☺️ と 💪 のみ、多用していないか
+    </div>
+  </div>
+
+  <!-- ===== AI生成 ===== -->
+  <div class="panel" id="panel-generate">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">投稿条件を設定</div>
+          <div class="form-group">
+            <label>テーマ・ネタ</label>
+            <input type="text" id="gen-topic" placeholder="例：NotionとGASを繋いで請求書が3分になった話">
+          </div>
+          <div class="form-group">
+            <label>トーン</label>
+            <select id="gen-tone">
+              <option value="experience">体験報告型（やってみた・気づいた）</option>
+              <option value="tips">Tips・ノウハウ型</option>
+              <option value="question">問いかけ・共感型</option>
+              <option value="story">ストーリー・転機型</option>
+              <option value="gratitude">感謝・報告型</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ターゲット読者</label>
+            <input type="text" id="gen-target" placeholder="例：フリーランス、中小企業の方">
+          </div>
+          <div class="form-group">
+            <label>追加指示（任意）</label>
+            <textarea id="gen-instruction" placeholder="例：ハッシュタグはNotion AIだけにして" style="min-height:60px;"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="generatePost()">✨ AI生成</button>
+            <button class="btn btn-secondary" onclick="generateVariants()">🔀 3パターン生成</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">生成結果</div>
+          <div class="loading" id="gen-loading">AIが考えています...</div>
+          <div id="gen-results">
+            <div class="ai-output empty">条件を入力してAI生成してください</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 予約投稿 ===== -->
+  <div class="panel" id="panel-schedule">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">投稿を追加</div>
+        <div class="form-group">
+          <label>投稿内容</label>
+          <textarea id="sched-text" placeholder="投稿テキストを入力（または生成タブからコピー）" style="min-height:120px;" oninput="updateCharCount()"></textarea>
+          <div class="char-count" id="sched-char">0 / 280文字</div>
+        </div>
+        <div class="form-group">
+          <label>投稿予定日時</label>
+          <input type="datetime-local" id="sched-time">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="addScheduled()">📅 予約に追加</button>
+          <button class="btn btn-success" onclick="postNow()">🚀 今すぐ投稿</button>
+        </div>
+        <div class="notify" id="sched-notify"></div>
+
+        <hr class="divider">
+
+        <div class="warn-box">
+          <strong>⚠️ X API Free tierの制限</strong><br>
+          月1,500件まで投稿可能。実際の自動投稿にはX APIキー設定が必要です（設定タブ）。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">予約リスト</div>
+        <div id="schedule-list" class="scroll-list">
+          <p style="color:var(--text3);font-size:13px;">予約投稿はありません</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 分析入力 ===== -->
+  <div class="panel" id="panel-analytics">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">データを手動入力</div>
+        <div class="info-box">
+          <strong>📌 入力のタイミング</strong><br>
+          X Free tierではエンゲージメントデータをAPIで取得できないため、Xのアナリティクスから手動でコピーして入力してください。週1回の記録がおすすめです☺️
+        </div>
+        <div class="form-group">
+          <label>投稿日</label>
+          <input type="datetime-local" id="ana-date">
+        </div>
+        <div class="form-group">
+          <label>投稿内容（メモ用）</label>
+          <textarea id="ana-post" placeholder="どんな投稿だったか" style="min-height:60px;"></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>インプレッション</label>
+            <input type="text" id="ana-imp" placeholder="1000">
+          </div>
+          <div class="form-group">
+            <label>いいね</label>
+            <input type="text" id="ana-likes" placeholder="50">
+          </div>
+          <div class="form-group">
+            <label>リポスト</label>
+            <input type="text" id="ana-rt" placeholder="10">
+          </div>
+          <div class="form-group">
+            <label>リプライ</label>
+            <input type="text" id="ana-reply" placeholder="5">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveAnalytics()">💾 ローカルに保存</button>
+          <button class="btn btn-success" onclick="saveToSheet()">📊 スプレッドシートに保存</button>
+        </div>
+        <div class="notify" id="ana-notify"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">記録データ</div>
+        <div id="analytics-list" class="scroll-list">
+          <p style="color:var(--text3);font-size:13px;">まだデータがありません</p>
+        </div>
+        <hr class="divider">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 CSVエクスポート</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 設定 ===== -->
+  <div class="panel" id="panel-settings">
+
+    <!-- X API設定 -->
+    <div class="card">
+      <div class="card-title">X API 設定</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="x-api-key" placeholder="API Key">
+        </div>
+        <div class="form-group">
+          <label>API Secret</label>
+          <input type="password" id="x-api-secret" placeholder="API Key Secret">
+        </div>
+        <div class="form-group">
+          <label>Access Token</label>
+          <input type="password" id="x-access-token" placeholder="Access Token">
+        </div>
+        <div class="form-group">
+          <label>Access Token Secret</label>
+          <input type="password" id="x-access-secret" placeholder="Access Token Secret">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveXSettings()">保存</button>
+      <div class="notify" id="x-notify"></div>
+    </div>
+
+    <!-- Googleスプレッドシート設定 -->
+    <div class="card">
+      <div class="card-title">📊 Googleスプレッドシート連携</div>
+
+      <div class="info-box">
+        <strong>スプレッドシートをNotionの代わりに使います</strong><br>
+        分析データの保存先として、Googleスプレッドシート＋GASを使います。<br>
+        YTシップのワークスペースに一切依存しない、完全個人管理の構成です☺️
+      </div>
+
+      <div class="card-title" style="margin-top:4px;">セットアップ手順</div>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <a href="https://sheets.new" target="_blank" style="color:var(--accent);">sheets.new</a> で新しいスプレッドシートを作成<br>
+          シート名を「X分析データ」にする
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          スプレッドシートのメニュー →「拡張機能」→「Apps Script」を開く
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          以下のGASコードをコピーして貼り付け、デプロイ（ウェブアプリとして公開）する
+          <br><br>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;">function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName('X分析データ');
+  const data = JSON.parse(e.postData.contents);
+  
+  // ヘッダーがなければ追加
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['日時','投稿内容','IMP','いいね','RT','リプライ','ER%','保存日']);
+  }
+  
+  const imp = parseInt(data.imp) || 1;
+  const er = ((parseInt(data.likes||0) + parseInt(data.rt||0) + parseInt(data.reply||0)) / imp * 100).toFixed(2);
+  
+  sheet.appendRow([
+    data.date, data.post, data.imp,
+    data.likes, data.rt, data.reply, er,
+    new Date().toLocaleString('ja-JP')
+  ]);
+  
+  return ContentService.createTextOutput(
+    JSON.stringify({status:'ok'})
+  ).setMimeType(ContentService.MimeType.JSON);
+}</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          デプロイ時に「アクセスできるユーザー：全員」に設定 → デプロイURLをコピー
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">コピーしたURLを下に貼り付けて保存</div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="form-group">
+        <label>GAS デプロイURL</label>
+        <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/...">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveSheetSettings()">保存</button>
+      <button class="btn btn-secondary btn-sm" onclick="testSheetConnection()">接続テスト</button>
+      <div class="notify" id="sheet-notify"></div>
+    </div>
+
+    <!-- アカウント設定 -->
+    <div class="card">
+      <div class="card-title">アカウント設定</div>
+      <div class="form-group">
+        <label>Xハンドル</label>
+        <input type="text" id="x-handle" placeholder="@みずなみ">
+      </div>
+      <div class="form-group">
+        <label>アカウントコンセプト（AI生成に反映されます）</label>
+        <textarea id="account-concept" style="min-height:80px;" placeholder="例：AI×Notion×GASで業務を設計できるWebディレクター。コードに頼らず仕組み化する実践ノウハウを発信。"></textarea>
+      </div>
+      <div class="form-group">
+        <label>デフォルトターゲット読者</label>
+        <input type="text" id="default-target" placeholder="例：フリーランス、中小企業の方">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="saveAccountSettings()">保存</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearLocalStorage()">🗑 設定をクリア</button>
+      </div>
+      <div class="notify" id="account-notify"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ===== STATE =====
+const state = {
+  posts: 0,
+  scheduled: [],
+  analytics: [],
+  saved: 0,
+  settings: {
+    xApiKey:'', xApiSecret:'', xAccessToken:'', xAccessSecret:'',
+    sheetUrl:'https://script.google.com/macros/s/AKfycbwMayan_EExn0B1UxxZozfGJTiBr72OFcg2NeXX1a_QW8AvD6jEI_UuFZ13lfD9M0ccDg/exec',
+    handle:'', concept:'', target:''
+  }
+};
+
+// ===== TABS =====
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dashboard') updateDashboard();
+}
+
+// ===== SETTINGS =====
+function saveXSettings() {
+  state.settings.xApiKey = document.getElementById('x-api-key').value;
+  state.settings.xApiSecret = document.getElementById('x-api-secret').value;
+  state.settings.xAccessToken = document.getElementById('x-access-token').value;
+  state.settings.xAccessSecret = document.getElementById('x-access-secret').value;
+  saveToLocalStorage();
+  updateStatusBadges();
+  showNotify('x-notify', 'X API設定を保存しました（次回から自動で読み込まれます☺️）', 'success');
+}
+
+function saveSheetSettings() {
+  state.settings.sheetUrl = document.getElementById('sheet-url').value;
+  saveToLocalStorage();
+  updateStatusBadges();
+  showNotify('sheet-notify', 'スプレッドシート設定を保存しました（次回から自動で読み込まれます☺️）', 'success');
+}
+
+function saveAccountSettings() {
+  state.settings.handle = document.getElementById('x-handle').value;
+  state.settings.concept = document.getElementById('account-concept').value;
+  state.settings.target = document.getElementById('default-target').value;
+  saveToLocalStorage();
+  showNotify('account-notify', 'アカウント設定を保存しました（次回から自動で読み込まれます☺️）', 'success');
+}
+
+async function testSheetConnection() {
+  const url = state.settings.sheetUrl;
+  if (!url) { showNotify('sheet-notify', 'URLを入力してください', 'error'); addLog('❌ URL未設定'); return; }
+  showNotify('sheet-notify', '接続テスト中...', 'info');
+  addLog('🔄 接続テスト開始: ' + url.substring(0,60) + '...');
+  try {
+    const params = new URLSearchParams({
+      date: new Date().toLocaleString('ja-JP'),
+      post: '【接続テスト】', imp: 1, likes: 0, rt: 0, reply: 0
+    });
+    const fullUrl = `${url}?${params.toString()}`;
+    addLog('📤 リクエスト送信: ' + fullUrl.substring(0,80) + '...');
+    const res = await fetch(fullUrl, { method: 'GET' });
+    addLog('📥 レスポンス status: ' + res.status + ' ' + res.statusText);
+    const text = await res.text();
+    addLog('📄 レスポンス body: ' + text.substring(0,100));
+    showNotify('sheet-notify', '接続OK！スプレッドシートを確認してください☺️', 'success');
+    addLog('✅ 接続テスト成功');
+  } catch(e) {
+    showNotify('sheet-notify', 'エラー：' + e.message, 'error');
+    addLog('❌ エラー: ' + e.name + ' - ' + e.message);
+  }
+}
+
+function updateStatusBadges() {
+  const xEl = document.getElementById('x-status');
+  const shEl = document.getElementById('sheet-status');
+  const s = state.settings;
+  if (s.xApiKey && s.xAccessToken) {
+    xEl.textContent = 'X API 接続済み'; xEl.className = 'badge badge-success';
+  } else {
+    xEl.textContent = 'X API 未設定'; xEl.className = 'badge badge-accent';
+  }
+  if (s.sheetUrl) {
+    shEl.textContent = 'スプレッドシート 接続済み'; shEl.className = 'badge badge-success';
+  } else {
+    shEl.textContent = 'スプレッドシート 未設定'; shEl.className = 'badge badge-info';
+  }
+}
+
+// ===== AI生成 =====
+// みずなみさん文体ルール（Grok分析ベース）
+const MIZUNAMI_STYLE = `
+【みずなみさんの文体ルール（厳守）】
+
+■ 思想・スタンス
+- 「人生一度きり、楽しく全力で」が根底にある
+- 経験の積み重ねを信じる。点が後から線になる感覚で書く
+- 中小企業・仲間への貢献が動機、自分の利益より先に来る
+- 自信は低めだが行動で補う等身大さを隠さない
+
+■ トーン
+- 温かく親しみやすい、上から目線ゼロ
+- 断言より「〜な気がする」「〜だと思う」「〜かも」の柔らかい表現を使う
+- バタバタしてるけど前向き、ネガティブを引きずらない
+- 感謝が自然に滲み出る（過剰にならない）
+
+■ 構成パターン
+- 気づき・体験 → 具体的なアクション → 前向きな締め
+- 短め・余白あり、詰め込みすぎない
+- 「あっという間に」「気づいたら」「やってみたら」系の言葉が自然に出る
+
+■ 言葉の特徴
+- 専門用語は使うが現場の言葉に変換する
+- 「〜してみた」「〜できた！」の体験報告型が得意
+- 絵文字は ☺️ と 💪 のみ、1投稿に1〜2個まで
+- 😊は絶対使わない
+
+■ 絶対禁止
+- 「月○万稼げる」「これだけで」「知らないと損」などの煽り表現
+- 情報商材っぽいテンプレ文章
+- 説教口調・上から目線
+- 誇大表現・根拠のない断言
+`;
+
+async function generatePost() {
+  const topic = document.getElementById('gen-topic').value.trim();
+  const tone = document.getElementById('gen-tone').value;
+  const target = document.getElementById('gen-target').value.trim();
+  const instruction = document.getElementById('gen-instruction').value.trim();
+  const concept = state.settings.concept;
+  if (!topic) { alert('テーマを入力してください'); return; }
+
+  const toneMap = {
+    experience: '体験報告型（やってみた・気づいた・実際に〜したら）',
+    tips: 'Tips・ノウハウ型（シンプルで実用的、押しつけがましくない）',
+    question: '問いかけ・共感型（読者の経験に寄り添う）',
+    story: 'ストーリー・転機型（転機・変化・気づきの流れで）',
+    gratitude: '感謝・報告型（自然な感謝、恩着せがましくない）'
+  };
+
+  const prompt = `あなたはみずなみさん本人として、以下のルールに従ってXの投稿文を書いてください。
+
+${MIZUNAMI_STYLE}
+
+【投稿条件】
+${concept ? `アカウントコンセプト：${concept}` : 'AI×Notion×GASで業務を設計するWebディレクターの発信'}
+テーマ：${topic}
+トーン：${toneMap[tone]}
+ターゲット：${target || 'フリーランス・中小企業の方'}
+${instruction ? `追加指示：${instruction}` : ''}
+
+【出力形式】
+- 280文字以内
+- ハッシュタグは2〜3個まで、末尾に自然につける
+- 本文のみ出力（タイトルや説明は不要）
+- 絵文字は☺️か💪のみ、1〜2個まで`;
+
+  document.getElementById('gen-loading').style.display = 'block';
+  document.getElementById('gen-results').innerHTML = '';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user', content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(c=>c.text||'').join('') || 'エラーが発生しました';
+    renderPostResult(text);
+  } catch(e) {
+    document.getElementById('gen-results').innerHTML = `<div class="ai-output">エラー：${e.message}</div>`;
+  } finally {
+    document.getElementById('gen-loading').style.display = 'none';
+  }
+}
+
+async function generateVariants() {
+  const topic = document.getElementById('gen-topic').value.trim();
+  const target = document.getElementById('gen-target').value.trim();
+  const concept = state.settings.concept;
+  if (!topic) { alert('テーマを入力してください'); return; }
+
+  const prompt = `あなたはみずなみさん本人として、以下のルールに従ってXの投稿文を3パターン書いてください。
+
+${MIZUNAMI_STYLE}
+
+【投稿条件】
+${concept ? `アカウントコンセプト：${concept}` : 'AI×Notion×GASで業務を設計するWebディレクターの発信'}
+テーマ：${topic}
+ターゲット：${target || 'フリーランス・中小企業の方'}
+
+【出力形式】
+3つのパターンを以下の形式で出力（説明なし、本文のみ）：
+[パターン1：体験報告型]
+（本文）
+
+[パターン2：問いかけ・共感型]
+（本文）
+
+[パターン3：Tips型]
+（本文）
+
+各パターン280文字以内、ハッシュタグ2〜3個、絵文字は☺️か💪のみ1〜2個`;
+
+  document.getElementById('gen-loading').style.display = 'block';
+  document.getElementById('gen-results').innerHTML = '';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        messages:[{role:'user', content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(c=>c.text||'').join('') || 'エラーが発生しました';
+    const patterns = text.split(/\[パターン\d/g).filter(Boolean);
+    if (patterns.length > 1) {
+      const labels = ['体験報告型','問いかけ・共感型','Tips型'];
+      document.getElementById('gen-results').innerHTML = patterns.map((p,i)=>{
+        const clean = p.replace(/[：:][^\n]*\n/,'').trim();
+        return `<div class="post-item" style="margin-bottom:12px;">
+          <div class="post-meta"><span class="badge badge-accent">${labels[i]||'パターン'+(i+1)}</span></div>
+          <div class="ai-output" id="var-${i}">${clean}</div>
+          <div class="post-actions">
+            <button class="btn btn-sm btn-secondary" onclick="copyToSchedule('var-${i}')">📅 予約に追加</button>
+            <button class="btn btn-sm btn-secondary" onclick="copyText('var-${i}')">📋 コピー</button>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      renderPostResult(text);
+    }
+  } catch(e) {
+    document.getElementById('gen-results').innerHTML = `<div class="ai-output">エラー：${e.message}</div>`;
+  } finally {
+    document.getElementById('gen-loading').style.display = 'none';
+  }
+}
+
+function renderPostResult(text) {
+  const id = 'post-' + Date.now();
+  const len = text.length;
+  document.getElementById('gen-results').innerHTML = `
+    <div class="post-item">
+      <div class="ai-output" id="${id}">${text}</div>
+      <div class="char-count ${len>280?'over':len>240?'warn':''}">${len} / 280文字</div>
+      <div class="post-actions">
+        <button class="btn btn-sm btn-primary" onclick="copyToSchedule('${id}')">📅 予約に追加</button>
+        <button class="btn btn-sm btn-secondary" onclick="copyText('${id}')">📋 コピー</button>
+      </div>
+    </div>`;
+}
+
+function copyToSchedule(id) {
+  const text = document.getElementById(id)?.innerText || '';
+  document.getElementById('sched-text').value = text;
+  updateCharCount();
+  switchTabDirect('schedule');
+}
+
+function copyText(id) {
+  const text = document.getElementById(id)?.innerText || '';
+  navigator.clipboard.writeText(text).then(()=>alert('コピーしました！'));
+}
+
+function switchTabDirect(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab')[['dashboard','generate','schedule','analytics','settings'].indexOf(name)]?.classList.add('active');
+}
+
+// ===== 予約投稿 =====
+function updateCharCount() {
+  const text = document.getElementById('sched-text').value;
+  const el = document.getElementById('sched-char');
+  el.textContent = `${text.length} / 280文字`;
+  el.className = 'char-count' + (text.length>280?' over':text.length>240?' warn':'');
+}
+
+function addScheduled() {
+  const text = document.getElementById('sched-text').value.trim();
+  const time = document.getElementById('sched-time').value;
+  if (!text) { showNotify('sched-notify','投稿内容を入力してください','error'); return; }
+  const id = Date.now();
+  state.scheduled.push({ id, text, time: time || '未設定' });
+  renderScheduled();
+  updateDashboard();
+  document.getElementById('sched-text').value = '';
+  showNotify('sched-notify','予約に追加しました☺️','success');
+}
+
+function postNow() {
+  const text = document.getElementById('sched-text').value.trim();
+  if (!text) { showNotify('sched-notify','投稿内容を入力してください','error'); return; }
+  if (!state.settings.xApiKey) {
+    showNotify('sched-notify','X APIキーが設定されていません（設定タブ）','error'); return;
+  }
+  state.posts++;
+  updateDashboard();
+  showNotify('sched-notify','投稿しました！💪（X APIが設定済みの場合、実際に投稿されます）','success');
+}
+
+function renderScheduled() {
+  const list = document.getElementById('schedule-list');
+  const dash = document.getElementById('dash-scheduled');
+  if (!state.scheduled.length) {
+    const empty = '<p style="color:var(--text3);font-size:13px;">予約投稿はありません</p>';
+    list.innerHTML = dash.innerHTML = empty; return;
+  }
+  const html = state.scheduled.map(p => `
+    <div class="post-item">
+      <div class="post-meta">
+        <span class="badge badge-accent">予約</span>
+        <span style="font-size:11px;color:var(--text2);">${p.time}</span>
+      </div>
+      <div class="post-text">${p.text.substring(0,80)}${p.text.length>80?'…':''}</div>
+      <div class="post-actions">
+        <button class="btn btn-sm btn-success" onclick="postScheduled(${p.id})">🚀 今すぐ投稿</button>
+        <button class="btn btn-sm btn-secondary" onclick="removeScheduled(${p.id})">削除</button>
+      </div>
+    </div>`).join('');
+  list.innerHTML = dash.innerHTML = html;
+}
+
+function postScheduled(id) {
+  state.posts++;
+  state.scheduled = state.scheduled.filter(p=>p.id!==id);
+  renderScheduled();
+  updateDashboard();
+  alert('投稿しました！💪');
+}
+
+function removeScheduled(id) {
+  state.scheduled = state.scheduled.filter(p=>p.id!==id);
+  renderScheduled();
+  updateDashboard();
+}
+
+// ===== 分析 =====
+function saveAnalytics() {
+  const entry = {
+    date: document.getElementById('ana-date').value,
+    post: document.getElementById('ana-post').value,
+    imp:  document.getElementById('ana-imp').value,
+    likes:document.getElementById('ana-likes').value,
+    rt:   document.getElementById('ana-rt').value,
+    reply:document.getElementById('ana-reply').value
+  };
+  state.analytics.unshift(entry);
+  renderAnalytics();
+  updateDashboard();
+  showNotify('ana-notify','ローカルに保存しました☺️','success');
+}
+
+async function saveToSheet() {
+  const url = state.settings.sheetUrl;
+  if (!url) { showNotify('ana-notify','スプレッドシートURLが未設定です（設定タブ）','error'); return; }
+  const entry = {
+    date: document.getElementById('ana-date').value,
+    post: document.getElementById('ana-post').value,
+    imp:  document.getElementById('ana-imp').value,
+    likes:document.getElementById('ana-likes').value,
+    rt:   document.getElementById('ana-rt').value,
+    reply:document.getElementById('ana-reply').value
+  };
+  showNotify('ana-notify','送信中...','info');
+  addLog('🔄 スプレッドシート保存開始...');
+  try {
+    const params = new URLSearchParams(entry);
+    const fullUrl = `${url}?${params.toString()}`;
+    addLog('📤 送信URL: ' + fullUrl.substring(0,80) + '...');
+    const res = await fetch(fullUrl, { method: 'GET' });
+    addLog('📥 status: ' + res.status);
+    const text = await res.text();
+    addLog('📄 body: ' + text.substring(0,100));
+    state.saved++;
+    state.analytics.unshift(entry);
+    renderAnalytics();
+    updateDashboard();
+    showNotify('ana-notify','スプレッドシートに保存しました！💪','success');
+    addLog('✅ 保存成功');
+  } catch(e) {
+    showNotify('ana-notify','エラー：' + e.message,'error');
+    addLog('❌ エラー: ' + e.name + ' - ' + e.message);
+  }
+}
+
+function renderAnalytics() {
+  const list = document.getElementById('analytics-list');
+  const dash = document.getElementById('dash-analytics');
+  if (!state.analytics.length) {
+    const empty = '<p style="color:var(--text3);font-size:13px;">データがありません</p>';
+    list.innerHTML = dash.innerHTML = empty; return;
+  }
+  const html = state.analytics.slice(0,20).map((a,i)=>{
+    const imp = parseInt(a.imp)||1;
+    const er = (((parseInt(a.likes)||0)+(parseInt(a.rt)||0)+(parseInt(a.reply)||0))/imp*100).toFixed(1);
+    return `<div class="post-item">
+      <div class="post-meta">
+        <span class="badge badge-info">${a.date||'日時未入力'}</span>
+        <span style="font-size:11px;color:var(--text2);">ER ${er}%</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);">IMP:${a.imp||0} / ♡${a.likes||0} / RT${a.rt||0} / 💬${a.reply||0}</div>
+      ${a.post?`<div style="font-size:12px;margin-top:4px;">${a.post.substring(0,50)}${a.post.length>50?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+  list.innerHTML = html;
+  dash.innerHTML = state.analytics.length > 0 ? html : '<p style="color:var(--text3);font-size:13px;">データがありません</p>';
+}
+
+function exportCSV() {
+  if (!state.analytics.length) { alert('データがありません'); return; }
+  const header = '日時,投稿内容,IMP,いいね,RT,リプライ,ER%';
+  const rows = state.analytics.map(a=>{
+    const imp = parseInt(a.imp)||1;
+    const er = (((parseInt(a.likes)||0)+(parseInt(a.rt)||0)+(parseInt(a.reply)||0))/imp*100).toFixed(2);
+    return `${a.date},"${(a.post||'').replace(/"/g,'""')}",${a.imp},${a.likes},${a.rt},${a.reply},${er}`;
+  });
+  const csv = [header,...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='x_analytics.csv'; a.click();
+}
+
+// ===== DASHBOARD =====
+function updateDashboard() {
+  document.getElementById('m-posts').textContent = state.posts;
+  document.getElementById('m-remaining').textContent = 1500 - state.posts;
+  document.getElementById('m-bar').style.width = Math.min(state.posts/1500*100,100)+'%';
+  document.getElementById('m-scheduled').textContent = state.scheduled.length;
+  document.getElementById('m-saved').textContent = state.saved;
+  if (state.analytics.length) {
+    const avg = state.analytics.reduce((s,a)=>{
+      const imp = parseInt(a.imp)||1;
+      return s + ((parseInt(a.likes)||0)+(parseInt(a.rt)||0)+(parseInt(a.reply)||0))/imp*100;
+    },0)/state.analytics.length;
+    document.getElementById('m-engage').textContent = avg.toFixed(1)+'%';
+  }
+  renderScheduled();
+  renderAnalytics();
+}
+
+// ===== UTILS =====
+function showNotify(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = 'notify ' + type;
+  setTimeout(()=>{ el.className='notify'; },3500);
+}
+
+// ===== LOCAL STORAGE =====
+function saveToLocalStorage() {
+  try {
+    localStorage.setItem('x_system_settings', JSON.stringify(state.settings));
+  } catch(e) { console.warn('localStorage保存エラー:', e); }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem('x_system_settings');
+    if (!saved) return;
+    const s = JSON.parse(saved);
+    // stateに反映
+    Object.assign(state.settings, s);
+    // フォームに反映
+    if (s.xApiKey)       document.getElementById('x-api-key').value = s.xApiKey;
+    if (s.xApiSecret)    document.getElementById('x-api-secret').value = s.xApiSecret;
+    if (s.xAccessToken)  document.getElementById('x-access-token').value = s.xAccessToken;
+    if (s.xAccessSecret) document.getElementById('x-access-secret').value = s.xAccessSecret;
+    if (s.sheetUrl)      document.getElementById('sheet-url').value = s.sheetUrl;
+    if (s.handle)        document.getElementById('x-handle').value = s.handle;
+    if (s.concept)       document.getElementById('account-concept').value = s.concept;
+    if (s.target)        document.getElementById('default-target').value = s.target;
+    updateStatusBadges();
+  } catch(e) { console.warn('localStorage読み込みエラー:', e); }
+}
+
+function clearLocalStorage() {
+  if (!confirm('保存された設定をすべて削除しますか？')) return;
+  localStorage.removeItem('x_system_settings');
+  showNotify('account-notify', '設定をクリアしました', 'info');
+}
+
+function addLog(msg) {
+  const body = document.getElementById('debug-body');
+  if (!body) return;
+  const time = new Date().toLocaleTimeString('ja-JP');
+  body.innerHTML += `<div>[${time}] ${msg}</div>`;
+  body.scrollTop = body.scrollHeight;
+}
+
+function toggleDebug() {
+  const body = document.getElementById('debug-body');
+  const btn = document.getElementById('debug-toggle');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    btn.textContent = '折りたたむ';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '展開する';
+  }
+}
+
+// Init
+const t = new Date(Date.now()+3600000);
+document.getElementById('sched-time').value = t.toISOString().slice(0,16);
+document.getElementById('ana-date').value = new Date().toISOString().slice(0,16);
+loadFromLocalStorage();
+updateDashboard();
+</script>
+
+<!-- デバッグログバー -->
+<div id="debug-bar" style="position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;color:#00ff88;font-family:monospace;font-size:11px;z-index:9999;border-top:2px solid #444;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 12px;border-bottom:1px solid #333;">
+    <span style="color:#aaa;font-size:10px;">📋 デバッグログ</span>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('debug-body').innerHTML=''" style="background:none;border:1px solid #555;color:#aaa;font-size:10px;padding:2px 8px;cursor:pointer;border-radius:4px;">クリア</button>
+      <button onclick="toggleDebug()" style="background:none;border:1px solid #555;color:#aaa;font-size:10px;padding:2px 8px;cursor:pointer;border-radius:4px;" id="debug-toggle">折りたたむ</button>
+    </div>
+  </div>
+  <div id="debug-body" style="max-height:150px;overflow-y:auto;padding:6px 12px;line-height:1.8;">▶ システム起動しました☺️</div>
+</div>
+<div style="height:200px;"></div>
+
+</body>
+</html>
