@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>X AI投稿管理システム v2</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -245,6 +246,15 @@
 
   /* Scrollable list */
   .scroll-list { max-height: 400px; overflow-y: auto; }
+
+  /* Auth status */
+  .auth-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 6px 12px;
+    border-radius: var(--radius-sm); margin-top: 10px;
+  }
+  .auth-status.authed { background: var(--success-light); color: #2e7d4f; }
+  .auth-status.unauthed { background: var(--accent-light); color: var(--accent-dark); }
 </style>
 </head>
 <body>
@@ -492,9 +502,9 @@
       <div class="card-title">📊 Googleスプレッドシート連携</div>
 
       <div class="info-box">
-        <strong>スプレッドシートをNotionの代わりに使います</strong><br>
-        分析データの保存先として、Googleスプレッドシート＋GASを使います。<br>
-        YTシップのワークスペースに一切依存しない、完全個人管理の構成です☺️
+        <strong>Google Sheets API（直接連携）方式</strong><br>
+        GASなしで、Google Sheets APIを使ってスプレッドシートに直接書き込みます。<br>
+        Googleアカウントで認証するだけで使えます☺️
       </div>
 
       <div class="card-title" style="margin-top:4px;">セットアップ手順</div>
@@ -502,64 +512,53 @@
         <div class="step-num">1</div>
         <div class="step-content">
           <a href="https://sheets.new" target="_blank" style="color:var(--accent);">sheets.new</a> で新しいスプレッドシートを作成<br>
-          シート名を「X分析データ」にする
+          シート名を <code>X分析データ</code> にする
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-content">
-          スプレッドシートのメニュー →「拡張機能」→「Apps Script」を開く
+          スプレッドシートのURLから <strong>スプレッドシートID</strong> をコピーする<br>
+          <code style="word-break:break-all;">https://docs.google.com/spreadsheets/d/<strong>ここがID</strong>/edit</code>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-content">
-          以下のGASコードをコピーして貼り付け、デプロイ（ウェブアプリとして公開）する
-          <br><br>
-          <div style="background:var(--surface2);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;">function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet()
-    .getSheetByName('X分析データ');
-  const data = JSON.parse(e.postData.contents);
-  
-  // ヘッダーがなければ追加
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['日時','投稿内容','IMP','いいね','RT','リプライ','ER%','保存日']);
-  }
-  
-  const imp = parseInt(data.imp) || 1;
-  const er = ((parseInt(data.likes||0) + parseInt(data.rt||0) + parseInt(data.reply||0)) / imp * 100).toFixed(2);
-  
-  sheet.appendRow([
-    data.date, data.post, data.imp,
-    data.likes, data.rt, data.reply, er,
-    new Date().toLocaleString('ja-JP')
-  ]);
-  
-  return ContentService.createTextOutput(
-    JSON.stringify({status:'ok'})
-  ).setMimeType(ContentService.MimeType.JSON);
-}</div>
+          <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--accent);">Google Cloud Console</a> でプロジェクトを作成し、<br>
+          <strong>Google Sheets API</strong> を有効化する
         </div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-content">
-          デプロイ時に「アクセスできるユーザー：全員」に設定 → デプロイURLをコピー
+          「認証情報」→「OAuthクライアントID」を作成（種類：<strong>ウェブアプリケーション</strong>）<br>
+          承認済みJavaScript生成元に使用するドメイン（GitHub Pagesなら <code>https://11foryou20.github.io</code>）を追加<br>
+          発行された <strong>クライアントID</strong> をコピーする
         </div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
-        <div class="step-content">コピーしたURLを下に貼り付けて保存</div>
+        <div class="step-content">
+          下のフォームにスプレッドシートIDとクライアントIDを入力 → 保存 → Google認証
+        </div>
       </div>
 
       <hr class="divider">
 
       <div class="form-group">
-        <label>GAS デプロイURL</label>
-        <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/...">
+        <label>スプレッドシートID</label>
+        <input type="text" id="sheet-id" placeholder="例：1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
       </div>
-      <button class="btn btn-primary btn-sm" onclick="saveSheetSettings()">保存</button>
-      <button class="btn btn-secondary btn-sm" onclick="testSheetConnection()">接続テスト</button>
+      <div class="form-group">
+        <label>Google OAuth クライアントID</label>
+        <input type="text" id="google-client-id" placeholder="例：123456789-xxxx.apps.googleusercontent.com">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="saveSheetSettings()">保存</button>
+        <button class="btn btn-success btn-sm" onclick="authorizeGoogle()">🔑 Google認証</button>
+      </div>
+      <div id="google-auth-status" class="auth-status unauthed" style="display:none;"></div>
       <div class="notify" id="sheet-notify"></div>
     </div>
 
@@ -597,10 +596,14 @@ const state = {
   saved: 0,
   settings: {
     xApiKey:'', xApiSecret:'', xAccessToken:'', xAccessSecret:'',
-    sheetUrl:'https://script.google.com/macros/s/AKfycbwMayan_EExn0B1UxxZozfGJTiBr72OFcg2NeXX1a_QW8AvD6jEI_UuFZ13lfD9M0ccDg/exec',
+    sheetId:'', googleClientId:'',
     handle:'', concept:'', target:''
   }
 };
+
+// Google OAuth
+let tokenClient = null;
+let googleAccessToken = null;
 
 // ===== TABS =====
 function switchTab(name) {
@@ -623,10 +626,12 @@ function saveXSettings() {
 }
 
 function saveSheetSettings() {
-  state.settings.sheetUrl = document.getElementById('sheet-url').value;
+  state.settings.sheetId = document.getElementById('sheet-id').value.trim();
+  state.settings.googleClientId = document.getElementById('google-client-id').value.trim();
+  tokenClient = null;
   saveToLocalStorage();
   updateStatusBadges();
-  showNotify('sheet-notify', 'スプレッドシート設定を保存しました（次回から自動で読み込まれます☺️）', 'success');
+  showNotify('sheet-notify', '設定を保存しました。次に「Google認証」ボタンを押してください☺️', 'success');
 }
 
 function saveAccountSettings() {
@@ -637,27 +642,53 @@ function saveAccountSettings() {
   showNotify('account-notify', 'アカウント設定を保存しました（次回から自動で読み込まれます☺️）', 'success');
 }
 
-async function testSheetConnection() {
-  const url = state.settings.sheetUrl;
-  if (!url) { showNotify('sheet-notify', 'URLを入力してください', 'error'); addLog('❌ URL未設定'); return; }
-  showNotify('sheet-notify', '接続テスト中...', 'info');
-  addLog('🔄 接続テスト開始: ' + url.substring(0,60) + '...');
-  try {
-    const params = new URLSearchParams({
-      date: new Date().toLocaleString('ja-JP'),
-      post: '【接続テスト】', imp: 1, likes: 0, rt: 0, reply: 0
-    });
-    const fullUrl = `${url}?${params.toString()}`;
-    addLog('📤 リクエスト送信: ' + fullUrl.substring(0,80) + '...');
-    const res = await fetch(fullUrl, { method: 'GET' });
-    addLog('📥 レスポンス status: ' + res.status + ' ' + res.statusText);
-    const text = await res.text();
-    addLog('📄 レスポンス body: ' + text.substring(0,100));
-    showNotify('sheet-notify', '接続OK！スプレッドシートを確認してください☺️', 'success');
-    addLog('✅ 接続テスト成功');
-  } catch(e) {
-    showNotify('sheet-notify', 'エラー：' + e.message, 'error');
-    addLog('❌ エラー: ' + e.name + ' - ' + e.message);
+// ===== GOOGLE OAUTH =====
+function initTokenClient() {
+  const clientId = state.settings.googleClientId;
+  if (!clientId) {
+    showNotify('sheet-notify', 'クライアントIDを入力・保存してから認証してください', 'error');
+    return false;
+  }
+  if (typeof google === 'undefined' || !google.accounts) {
+    showNotify('sheet-notify', 'Google Identity Servicesの読み込みを待っています...', 'info');
+    return false;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: (tokenResponse) => {
+      if (tokenResponse.error) {
+        showNotify('sheet-notify', '認証エラー：' + tokenResponse.error, 'error');
+        addLog('❌ Google認証エラー: ' + tokenResponse.error);
+        return;
+      }
+      googleAccessToken = tokenResponse.access_token;
+      updateAuthStatus(true);
+      updateStatusBadges();
+      showNotify('sheet-notify', 'Google認証成功！スプレッドシートへの書き込みが可能になりました☺️', 'success');
+      addLog('✅ Google認証成功');
+    }
+  });
+  return true;
+}
+
+function authorizeGoogle() {
+  if (!state.settings.googleClientId) {
+    showNotify('sheet-notify', 'クライアントIDを入力して保存してください', 'error');
+    return;
+  }
+  if (!tokenClient && !initTokenClient()) return;
+  tokenClient.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+}
+
+function updateAuthStatus(authed) {
+  const el = document.getElementById('google-auth-status');
+  if (authed) {
+    el.textContent = '✅ Google認証済み（スプレッドシートに書き込み可能）';
+    el.className = 'auth-status authed';
+    el.style.display = 'inline-flex';
+  } else {
+    el.style.display = 'none';
   }
 }
 
@@ -670,15 +701,16 @@ function updateStatusBadges() {
   } else {
     xEl.textContent = 'X API 未設定'; xEl.className = 'badge badge-accent';
   }
-  if (s.sheetUrl) {
+  if (s.sheetId && googleAccessToken) {
     shEl.textContent = 'スプレッドシート 接続済み'; shEl.className = 'badge badge-success';
+  } else if (s.sheetId) {
+    shEl.textContent = 'スプレッドシート ID設定済み'; shEl.className = 'badge badge-warn';
   } else {
     shEl.textContent = 'スプレッドシート 未設定'; shEl.className = 'badge badge-info';
   }
 }
 
 // ===== AI生成 =====
-// みずなみさん文体ルール（Grok分析ベース）
 const MIZUNAMI_STYLE = `
 【みずなみさんの文体ルール（厳守）】
 
@@ -952,8 +984,14 @@ function saveAnalytics() {
 }
 
 async function saveToSheet() {
-  const url = state.settings.sheetUrl;
-  if (!url) { showNotify('ana-notify','スプレッドシートURLが未設定です（設定タブ）','error'); return; }
+  const sheetId = state.settings.sheetId;
+  if (!sheetId) {
+    showNotify('ana-notify','スプレッドシートIDが未設定です（設定タブ）','error'); return;
+  }
+  if (!googleAccessToken) {
+    showNotify('ana-notify','Google認証が必要です（設定タブ → Google認証ボタン）','error'); return;
+  }
+
   const entry = {
     date: document.getElementById('ana-date').value,
     post: document.getElementById('ana-post').value,
@@ -962,25 +1000,54 @@ async function saveToSheet() {
     rt:   document.getElementById('ana-rt').value,
     reply:document.getElementById('ana-reply').value
   };
-  showNotify('ana-notify','送信中...','info');
-  addLog('🔄 スプレッドシート保存開始...');
+
+  const imp = parseInt(entry.imp) || 1;
+  const er = (((parseInt(entry.likes)||0) + (parseInt(entry.rt)||0) + (parseInt(entry.reply)||0)) / imp * 100).toFixed(2);
+
+  const values = [[
+    entry.date, entry.post, entry.imp, entry.likes,
+    entry.rt, entry.reply, er, new Date().toLocaleString('ja-JP')
+  ]];
+
+  showNotify('ana-notify','スプレッドシートに送信中...','info');
+  addLog('🔄 Sheets API書き込み開始...');
+
+  const range = encodeURIComponent('X分析データ!A:H');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
   try {
-    const params = new URLSearchParams(entry);
-    const fullUrl = `${url}?${params.toString()}`;
-    addLog('📤 送信URL: ' + fullUrl.substring(0,80) + '...');
-    const res = await fetch(fullUrl, { method: 'GET' });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${googleAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ values })
+    });
+
     addLog('📥 status: ' + res.status);
-    const text = await res.text();
-    addLog('📄 body: ' + text.substring(0,100));
+
+    if (!res.ok) {
+      const err = await res.json();
+      if (res.status === 401) {
+        googleAccessToken = null;
+        updateAuthStatus(false);
+        updateStatusBadges();
+        throw new Error('認証トークンが期限切れです。設定タブで再度Google認証してください');
+      }
+      throw new Error(err.error?.message || res.statusText);
+    }
+
+    const data = await res.json();
+    addLog('✅ 書き込み成功: ' + JSON.stringify(data.updates || {}));
     state.saved++;
     state.analytics.unshift(entry);
     renderAnalytics();
     updateDashboard();
     showNotify('ana-notify','スプレッドシートに保存しました！💪','success');
-    addLog('✅ 保存成功');
   } catch(e) {
     showNotify('ana-notify','エラー：' + e.message,'error');
-    addLog('❌ エラー: ' + e.name + ' - ' + e.message);
+    addLog('❌ エラー: ' + e.message);
   }
 }
 
@@ -991,7 +1058,7 @@ function renderAnalytics() {
     const empty = '<p style="color:var(--text3);font-size:13px;">データがありません</p>';
     list.innerHTML = dash.innerHTML = empty; return;
   }
-  const html = state.analytics.slice(0,20).map((a,i)=>{
+  const html = state.analytics.slice(0,20).map((a)=>{
     const imp = parseInt(a.imp)||1;
     const er = (((parseInt(a.likes)||0)+(parseInt(a.rt)||0)+(parseInt(a.reply)||0))/imp*100).toFixed(1);
     return `<div class="post-item">
@@ -1058,17 +1125,16 @@ function loadFromLocalStorage() {
     const saved = localStorage.getItem('x_system_settings');
     if (!saved) return;
     const s = JSON.parse(saved);
-    // stateに反映
     Object.assign(state.settings, s);
-    // フォームに反映
-    if (s.xApiKey)       document.getElementById('x-api-key').value = s.xApiKey;
-    if (s.xApiSecret)    document.getElementById('x-api-secret').value = s.xApiSecret;
-    if (s.xAccessToken)  document.getElementById('x-access-token').value = s.xAccessToken;
-    if (s.xAccessSecret) document.getElementById('x-access-secret').value = s.xAccessSecret;
-    if (s.sheetUrl)      document.getElementById('sheet-url').value = s.sheetUrl;
-    if (s.handle)        document.getElementById('x-handle').value = s.handle;
-    if (s.concept)       document.getElementById('account-concept').value = s.concept;
-    if (s.target)        document.getElementById('default-target').value = s.target;
+    if (s.xApiKey)        document.getElementById('x-api-key').value = s.xApiKey;
+    if (s.xApiSecret)     document.getElementById('x-api-secret').value = s.xApiSecret;
+    if (s.xAccessToken)   document.getElementById('x-access-token').value = s.xAccessToken;
+    if (s.xAccessSecret)  document.getElementById('x-access-secret').value = s.xAccessSecret;
+    if (s.sheetId)        document.getElementById('sheet-id').value = s.sheetId;
+    if (s.googleClientId) document.getElementById('google-client-id').value = s.googleClientId;
+    if (s.handle)         document.getElementById('x-handle').value = s.handle;
+    if (s.concept)        document.getElementById('account-concept').value = s.concept;
+    if (s.target)         document.getElementById('default-target').value = s.target;
     updateStatusBadges();
   } catch(e) { console.warn('localStorage読み込みエラー:', e); }
 }
@@ -1076,6 +1142,9 @@ function loadFromLocalStorage() {
 function clearLocalStorage() {
   if (!confirm('保存された設定をすべて削除しますか？')) return;
   localStorage.removeItem('x_system_settings');
+  googleAccessToken = null;
+  tokenClient = null;
+  updateAuthStatus(false);
   showNotify('account-notify', '設定をクリアしました', 'info');
 }
 
